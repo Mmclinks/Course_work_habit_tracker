@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "django_filters",
     "drf_yasg",
     "corsheaders",
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -114,7 +115,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = "auth.User"
+AUTH_USER_MODEL = 'users.CustomUser'
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -133,21 +134,64 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
 CORS_ALLOWED_ORIGINS = [
-    "https://read-only.example.com",
-    "https://read-and-write.example.com",
+    "http://localhost:8000",
+    "https://your-frontend-domain.com",
 ]
+
+CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
     "https://read-and-write.example.com",
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8000',  # Разрешение для локального хоста
+]
+
+# Отключить CSRF защиту для API
+CSRF_COOKIE_SECURE = False
+
+
 CELERY_BEAT_SCHEDULE = {
     "send-habit-reminders": {
         "task": "habits.tasks.send_habit_reminders",
-        "schedule": crontab(minute="*/1"),  # Каждую минуту
+        "schedule": crontab(minute="*/1"),
     },
 }
 
 CELERY_BROKER_URL = "redis://localhost:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': 'logs/app_errors.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'users': {  # Логгер для приложения 'users'
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'habits': {  # Логгер для приложения 'habits'
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}

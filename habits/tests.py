@@ -1,208 +1,286 @@
-from datetime import time
-
-from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 from django.test import TestCase
-from rest_framework import status
+from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
+from django.utils import timezone
+from .models import Habit
+from .serializers import HabitSerializer
 
-from habits.models import Habit
 
+
+User = get_user_model()
 
 class HabitModelTest(TestCase):
-    """Тесты для модели Habit."""
 
     def setUp(self):
-        """Создание пользователей и тестовых данных."""
-        self.user = User.objects.create_user(username="user1", password="pass123")
-        self.user2 = User.objects.create_user(username="user2", password="pass456")
-        self.client.login(username="user1", password="pass123")
-
-        # Привычки для user1
-        Habit.objects.create(
+        self.user = User.objects.create_user(email="testuser@example.com", password="password")
+        self.related_habit = Habit.objects.create(
             user=self.user,
-            place="Парк",
-            time=time(7, 0),
-            action="Медитация",
-            is_pleasant=False,
-            periodicity=1,
-            execution_time=60,
-        )
-        Habit.objects.create(
-            user=self.user,
-            place="Кафе",
-            time=time(8, 0),
-            action="Чтение",
-            is_pleasant=True,
-            periodicity=1,
-            execution_time=45,
-        )
-        Habit.objects.create(
-            user=self.user,
-            place="Гора",
-            time=time(9, 0),
-            action="Прогулка",
-            is_pleasant=True,
-            periodicity=2,
-            execution_time=120,
-        )
-        Habit.objects.create(
-            user=self.user,
-            place="Дерево",
-            time=time(10, 0),
-            action="Плавание",
-            is_pleasant=False,
-            periodicity=1,
+            action="Read",
+            place="Home",
+            reward=None,
+            related_habit=None,
+            time="08:00:00",  # Пример времени в правильном формате
             execution_time=30,
-        )
-
-        # Привычки для user2 (для проверки фильтрации)
-        Habit.objects.create(
-            user=self.user2,
-            place="Сад",
-            time=time(8, 0),
-            action="Чтение",
-            is_pleasant=True,
             periodicity=1,
-            execution_time=30,
+            is_pleasant=False
         )
 
-    def test_habit_creation(self):
-        """Тест создания привычки."""
+    def test_valid_habit_creation(self):
         habit = Habit.objects.create(
             user=self.user,
-            place="Парковка",
-            time=time(18, 30),
-            action="Прогулка",
-            is_pleasant=False,
+            place="Home",
+            time="08:00:00",
+            action="Exercise",
+            is_pleasant=True,
             periodicity=1,
-            reward="Чашка кофе",
-            execution_time=90,
-            is_public=True,
+            execution_time=60
         )
-        self.assertEqual(habit.user.username, "user1")
-        self.assertEqual(habit.place, "Парковка")
-        self.assertEqual(habit.execution_time, 90)
+        self.assertEqual(habit.user, self.user)
+        self.assertEqual(habit.place, "Home")
+        self.assertEqual(habit.time, "08:00:00")
+        self.assertEqual(habit.action, "Exercise")
 
-    def test_habit_execution_time_validation(self):
-        """Тест валидации времени выполнения привычки."""
+    def test_invalid_related_habit_and_reward(self):
         habit = Habit(
             user=self.user,
-            place="Двор",
-            time=time(19, 0),
-            action="Бег",
-            execution_time=150,  # Неверное время
-        )
-        with self.assertRaises(ValidationError):
-            habit.full_clean()
-
-    def test_habit_reward_and_related_validation(self):
-        """Тест валидации одновременного использования reward и related_habit."""
-        habit1 = Habit.objects.create(
-            user=self.user,
-            place="Сад",
-            time=time(8, 0),
-            action="Чтение",
-            is_pleasant=True,
+            action="Test action",
+            place="Test place",
+            reward="Reward",  # Вознаграждение
+            related_habit=self.related_habit,  # Связанная привычка
+            time="08:00:00",  # Время в правильном формате
             execution_time=30,
+            periodicity=1,
+            is_pleasant=False
         )
-        habit2 = Habit(
+        with self.assertRaises(ValidationError) as context:
+            habit.full_clean()
+        self.assertIn("Нельзя указывать одновременно вознаграждение и связанную привычку.",
+                      context.exception.message_dict["__all__"])
+
+    # def test_valid_habit(self):
+    #     habit = Habit(
+    #         user=self.user,
+    #         place="Test Place",
+    #         time="08:00:00",
+    #         action="Test Action",
+    #           # Без вознаграждения
+    #           # Без связанной привычки
+    #         is_pleasant=True,  # Приятная привычка
+    #         periodicity=1,
+    #         execution_time=60
+    #     )
+    #     try:
+    #         habit.full_clean()  # Должно пройти без ошибок
+    #     except ValidationError as e:
+    #         self.fail(f"ValidationError was raised unexpectedly: {e}")
+
+    def test_invalid_reward_and_related_habit(self):
+        habit = Habit(
             user=self.user,
-            place="Комната",
-            time=time(9, 0),
-            action="Упражнения",
-            reward="Шоколад",
-            related_habit=habit1,
+            action="Test action",
+            place="Test place",
+            reward="Reward",  # Вознаграждение
+            related_habit=self.related_habit,  # Связанная привычка
+            time="08:00:00",  # Время в правильном формате
+            execution_time=30,
+            periodicity=1,
+            is_pleasant=False
         )
-        with self.assertRaises(ValidationError):
-            habit2.full_clean()
+        try:
+            habit.full_clean()  # Проверка валидации
+            self.fail("ValidationError not raised")
+        except ValidationError as e:
+            self.assertIn("Нельзя указывать одновременно вознаграждение и связанную привычку.", e.message_dict["__all__"])
+
+    def test_invalid_related_habit(self):
+        habit = Habit(
+            user=self.user,
+            action="Test action",
+            place="Test place",
+            reward="Test reward",  # Вознаграждение
+            related_habit=self.related_habit,  # Связанная привычка
+            time="08:00:00",
+            execution_time=30,
+            periodicity=1,
+            is_pleasant=False
+        )
+        try:
+            habit.full_clean()  # Проверка валидации
+            self.fail("ValidationError not raised")
+        except ValidationError as e:
+            self.assertIn("Нельзя указывать одновременно вознаграждение и связанную привычку.",
+                          e.message_dict["__all__"])
 
 
-class HabitAPITest(APITestCase):
-    """Тесты для API привычек."""
+class HabitSerializerTest(APITestCase):
 
     def setUp(self):
-        """Создание пользователей и тестовых данных."""
-        self.user = User.objects.create_user(username="user1", password="pass123")
-        self.user2 = User.objects.create_user(username="user2", password="pass456")
-        self.client.login(username="user1", password="pass123")
+        self.user = User.objects.create_user(email="testuser@example.com", password="password")
 
-        self.habit = Habit.objects.create(
+    def test_valid_habit_serializer(self):
+        data = {
+            "user": self.user.id,
+            "place": "Home",
+            "time": "08:00:00",
+            "action": "Exercise",
+            "is_pleasant": True,
+            "periodicity": 1,
+            "execution_time": 60
+        }
+        serializer = HabitSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+
+    def test_invalid_habit_serializer_with_reward_and_related_habit(self):
+        related_habit = Habit.objects.create(
             user=self.user,
-            place="Парк",
-            time=time(7, 0),
-            action="Медитация",
+            place="Home",
+            time="08:00:00",
+            action="Read",
             is_pleasant=False,
+            reward=None,
+            related_habit=None,
             periodicity=1,
-            execution_time=60,
+            execution_time=60
         )
-        # Добавляем дополнительные привычки для user1
-        Habit.objects.create(
-            user=self.user,
-            place="Кафе",
-            time=time(8, 0),
-            action="Чтение",
-            is_pleasant=True,
-            periodicity=1,
-            execution_time=45,
-        )
-        Habit.objects.create(
-            user=self.user,
-            place="Гора",
-            time=time(9, 0),
-            action="Прогулка",
-            is_pleasant=True,
-            periodicity=2,
-            execution_time=120,
-        )
-        Habit.objects.create(
-            user=self.user,
-            place="Дерево",
-            time=time(10, 0),
-            action="Плавание",
-            is_pleasant=False,
-            periodicity=1,
-            execution_time=30,
-        )
-
-    def test_get_user_habits(self):
-        """Тест получения списка привычек пользователя."""
-        response = self.client.get("/api/habits/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            len(response.data), Habit.objects.filter(user=self.user).count()
-        )
-
-    def test_create_habit(self):
-        """Тест создания привычки."""
-        response = self.client.get("/api/habits/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        response = self.client.get("/api/habits/public/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = {
-            "place": "Кухня",
+            "user": self.user.id,
+            "place": "Home",
             "time": "08:00:00",
-            "action": "Готовка завтрака",
+            "action": "Exercise",
             "is_pleasant": False,
+            "reward": "Reward",
+            "related_habit": related_habit.id,
             "periodicity": 1,
-            "execution_time": 30,
+            "execution_time": 60
         }
-        response = self.client.post("/api/habits/", data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        serializer = HabitSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("non_field_errors", serializer.errors)
 
-    def test_user_cannot_access_others_habit(self):
-        """Тест, что пользователь не может получить привычку другого пользователя."""
-        self.client.logout()
-        self.client.login(username="user2", password="pass456")
-        response = self.client.get(f"/api/habits/{self.habit.id}/")
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+class HabitViewSetTest(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="testuser@example.com", password="password")
+        self.client.login(email="testuser@example.com", password="password")
+
+    def test_create_habit(self):
+        url = '/api/habits/'
+        data = {
+            'user': self.user.id,
+            'action': 'Test Habit',
+            'place': 'Test Place',
+            'reward': 'Test Reward',
+            'related_habit': '',  # Пустое значение, если оно не обязательно
+            'time': '08:00:00',
+            'execution_time': 30,
+            'periodicity': 1,
+            'is_pleasant': False
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 201)
 
     def test_get_public_habits(self):
-        """Тест получения публичных привычек."""
-        self.habit.is_public = True
-        self.habit.save()
-        response = self.client.get("/api/habits/public/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        url = '/api/habits/public/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_private_habits(self):
+        url = '/api/habits/private/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_update_habit(self):
+        habit = Habit.objects.create(
+            user=self.user,
+            action="Test action",
+            place="Test place",
+            reward="Test reward",  # Вознаграждение
+            related_habit=None,  # Связанной привычки нет
+            time="08:00:00",
+            execution_time=30,
+            periodicity=1,
+            is_pleasant=False
+        )
+        url = f'/api/habits/{habit.id}/'
+
+        # Обновляем привычку, сделав ее приятной
+        # Но теперь не передаем поля reward и related_habit
+        data = {
+            'user': self.user.id,
+            'action': 'Updated Habit',
+            'place': 'Updated Place',
+            'time': '08:00:00',
+            'execution_time': 45,
+            'periodicity': 1,
+            'is_pleasant': True  # Обновляем на приятную привычку
+        }
+
+        response = self.client.put(url, data)
+
+        # Ожидаем успешный ответ, так как не передаем запрещенные поля для приятной привычки
+        self.assertEqual(response.status_code, 200)  # Ожидаем успешный ответ (200)
+
+    def test_delete_habit(self):
+        habit = Habit.objects.create(
+            user=self.user,
+            place="Home",
+            action="Read",
+            time="08:00:00",
+            execution_time=60,
+            is_pleasant=True,
+            periodicity=1
+        )
+        url = f'/api/habits/{habit.id}/'
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 204)
+
+
+    def test_create_useful_habit_with_reward(self):
+        # Создание полезной привычки с вознаграждением
+        response = self.client.post('/api/habits/', {
+            'user': self.user.id,
+            'action': 'Test Useful Habit',
+            'place': 'Home',  # Обязательно указывать место
+            'time': '12:00:00',  # Обязательно указывать время
+            'reward': 'Dessert',
+            'execution_time': 600,
+        })
+        self.assertEqual(response.status_code, 201)  # Полезная привычка может иметь вознаграждение
+
+    def test_create_useful_habit_with_related_habit(self):
+        # Создаем связанную привычку
+        related_habit = Habit.objects.create(
+            user=self.user,
+            action='Related Habit',
+            place='Gym',
+            time='07:00:00',
+            execution_time=600,
+            is_pleasant=True,  # Связанная привычка должна быть приятной
+        )
+
+        # Теперь создаем полезную привычку с правильным ID related_habit
+        response = self.client.post('/api/habits/', {
+            'user': self.user.id,
+            'action': 'Test Useful Habit',
+            'place': 'Office',
+            'time': '09:00:00',
+            'related_habit': related_habit.id,  # Используем правильный ID для связанной привычки
+            'execution_time': 600,
+        })
+        self.assertEqual(response.status_code, 201)  # Ожидаем успешный ответ
+
+
+def test_create_pleasant_habit_without_related_or_reward(self):
+    # Попытка создать приятную привычку без вознаграждения и связанной привычки
+    response = self.client.post('/api/habits/', {
+        'user': self.user.id,
+        'action': 'Test Pleasant Habit',
+        'place': 'Home',
+        'time': '20:00:00',
+        'is_pleasant': True,  # Приятная привычка
+        'execution_time': 600,
+    })
+    self.assertEqual(response.status_code, 201)

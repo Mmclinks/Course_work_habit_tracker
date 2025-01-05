@@ -35,4 +35,5 @@ urlpatterns = [
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
     path("api/", include(router.urls)),  # Корень API должен быть /api/
     path("api-auth/", include("rest_framework.urls")),
+    path('api/users/', include('users.urls')),
 ]
