@@ -81,3 +81,19 @@ users/urls.py                                                    3      0   100%
 users/views.py                                                  36     17    53%
 --------------------------------------------------------------------------------
 TOTAL                                                          447     70    84%
+
+# Запуск проекта с Docker
+
+1. Клонировать репозиторий:
+git clone <URL_репозитория>
+
+2. Создать .env файл:
+USER=your_db_user
+PASSWORD=your_db_password
+NAME=your_db_name
+
+3. Запуск проекта:
+sudo docker-compose up -d --build
+
+4. Применение миграций:
+docker-compose exec web python manage.py migrate
