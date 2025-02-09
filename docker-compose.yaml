@@ -65,15 +65,14 @@
 #  static_volume:
 #  redis_data:
 #
-
 version: '3.9'
 
 services:
   web:
     build: .
-    container_name: django_app  # Добавил имя контейнера для удобства
+    container_name: django_app
     command: >
-      bash -c "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
+      bash -c "echo $SECRET_KEY && python manage.py migrate && gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
     environment:
       - DEBUG=False
       - SECRET_KEY=${SECRET_KEY}  # Используем переменную окружения
@@ -90,7 +89,7 @@ services:
 
   db:
     image: postgres:17
-    container_name: postgres_db  # Добавил имя контейнера для удобства
+    container_name: postgres_db
     environment:
       POSTGRES_DB: ${NAME}
       POSTGRES_USER: ${USER}
