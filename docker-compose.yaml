@@ -1,24 +1,100 @@
+#version: '3.9'
+#
+#services:
+#  web:
+#    build: .
+#    command: >
+#      bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+#    environment:
+#      - HOST=db
+#      - USER=${USER}
+#      - PASSWORD=${PASSWORD}
+#      - NAME=${NAME}
+#    ports:
+#      - "8000:8000"
+#    depends_on:
+#      - db
+#
+#  db:
+#    image: postgres:17
+#    env_file:
+#      - .env
+#    expose:
+#      - "5432"
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U ${USER}"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#
+#  redis:
+#    image: redis:alpine
+#    container_name: habit_tracker_redis
+#    volumes:
+#      - redis_data:/data
+#    expose:
+#      - "6379"
+#
+#  celery:
+#    build: .
+#    container_name: habit_tracker_celery
+#    restart: always
+#    depends_on:
+#      - web
+#      - redis
+#    env_file:
+#      - .env
+#    command: celery -A config worker --loglevel=info
+#
+#  celery-beat:
+#    build: .
+#    container_name: habit_tracker_celery_beat
+#    restart: always
+#    depends_on:
+#      - web
+#      - redis
+#      - celery
+#    env_file:
+#      - .env
+#    command: celery -A config beat --loglevel=info
+#
+#volumes:
+#  postgres_data:
+#  static_volume:
+#  redis_data:
+#
+
 version: '3.9'
 
 services:
   web:
     build: .
+    container_name: django_app  # Добавил имя контейнера для удобства
     command: >
-      bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+      bash -c "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
     environment:
-      - HOST=db
-      - USER=${USER}
-      - PASSWORD=${PASSWORD}
-      - NAME=${NAME}
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}  # Используем переменную окружения
+      - DATABASE_URL=postgres://${USER}:${PASSWORD}@db:5432/${NAME}
+      - ALLOWED_HOSTS=localhost 127.0.0.1
+      - CELERY_BROKER_URL=redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
       - db
+      - redis
+    volumes:
+      - .:/app  # Монтируем текущую директорию в контейнер
 
   db:
     image: postgres:17
-    env_file:
-      - .env
+    container_name: postgres_db  # Добавил имя контейнера для удобства
+    environment:
+      POSTGRES_DB: ${NAME}
+      POSTGRES_USER: ${USER}
+      POSTGRES_PASSWORD: ${PASSWORD}
     expose:
       - "5432"
     healthcheck:
@@ -44,8 +120,11 @@ services:
     depends_on:
       - web
       - redis
-    env_file:
-      - .env
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgres://${USER}:${PASSWORD}@db:5432/${NAME}
+      - CELERY_BROKER_URL=redis://redis:6379/0
     command: celery -A config worker --loglevel=info
 
   celery-beat:
@@ -56,11 +135,13 @@ services:
       - web
       - redis
       - celery
-    env_file:
-      - .env
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgres://${USER}:${PASSWORD}@db:5432/${NAME}
+      - CELERY_BROKER_URL=redis://redis:6379/0
     command: celery -A config beat --loglevel=info
 
 volumes:
   postgres_data:
-  static_volume:
   redis_data:
