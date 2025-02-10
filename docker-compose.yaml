@@ -1,80 +1,44 @@
-
-version: '3.9'
+version: '3.8'
 
 services:
   web:
     build: .
     container_name: django_app
-    command: >
-      bash -c "echo $SECRET_KEY && python manage.py migrate && gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
-    environment:
-      - DEBUG=False
-      - SECRET_KEY=${SECRET_KEY}  # Используем переменную окружения
-      - DATABASE_URL=postgres://${USER}:${PASSWORD}@db:5432/${NAME}
-      - ALLOWED_HOSTS=localhost 127.0.0.1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-    ports:
-      - "8000:8000"
+    command: gunicorn --bind 0.0.0.0:8000 app.wsgi:application
+    volumes:
+      - .:/app
+    env_file:
+      - .env
     depends_on:
       - db
-      - redis
-    volumes:
-      - .:/app  # Монтируем текущую директорию в контейнер
+    networks:
+      - backend
 
   db:
-    image: postgres:17
+    image: postgres:17.2
     container_name: postgres_db
-    environment:
-      POSTGRES_DB: ${NAME}
-      POSTGRES_USER: ${USER}
-      POSTGRES_PASSWORD: ${PASSWORD}
-    expose:
-      - "5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${USER}"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    restart: always
+    env_file:
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
 
-  redis:
-    image: redis:alpine
-    container_name: habit_tracker_redis
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server
+    ports:
+      - "80:80"
     volumes:
-      - redis_data:/data
-    expose:
-      - "6379"
-
-  celery:
-    build: .
-    container_name: habit_tracker_celery
-    restart: always
+      - ./nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - web
-      - redis
-    environment:
-      - DEBUG=False
-      - SECRET_KEY=${SECRET_KEY}
-      - DATABASE_URL=postgres://${USER}:${PASSWORD}@db:5432/${NAME}
-      - CELERY_BROKER_URL=redis://redis:6379/0
-    command: celery -A config worker --loglevel=info
-
-  celery-beat:
-    build: .
-    container_name: habit_tracker_celery_beat
-    restart: always
-    depends_on:
-      - web
-      - redis
-      - celery
-    environment:
-      - DEBUG=False
-      - SECRET_KEY=${SECRET_KEY}
-      - DATABASE_URL=postgres://${USER}:${PASSWORD}@db:5432/${NAME}
-      - CELERY_BROKER_URL=redis://redis:6379/0
-    command: celery -A config beat --loglevel=info
+    networks:
+      - backend
 
 volumes:
   postgres_data:
-  redis_data:
+
+networks:
+  backend:
