@@ -1,96 +1,169 @@
 # Трекер Привычек
 
-Проект представляет собой бэкенд-часть веб-приложения для отслеживания полезных привычек, с интеграцией с Telegram для отправки напоминаний. Приложение позволяет пользователю создавать, редактировать и удалять свои привычки, а также получать уведомления о их выполнении.
+Проект — бэкенд-часть веб-приложения для отслеживания полезных привычек, с интеграцией с Telegram для отправки напоминаний. Пользователи могут создавать, редактировать и удалять свои привычки, а также получать уведомления о их выполнении.
+
+## Стек технологий
+
+- **Python 3.12+** — основной язык разработки.
+- **Django** — веб-фреймворк для бэкенда.
+- **Django REST Framework (DRF)** — для создания API.
+- **Celery** — для асинхронных задач и планировщика.
+- **Redis** — брокер сообщений для Celery.
+- **PostgreSQL** — база данных.
+- **Docker** — для контейнеризации проекта.
+- **Docker Compose** — для упрощения работы с несколькими контейнерами.
+- **Nginx** — веб-сервер для проксирования запросов.
+- **GitHub Actions** — для автоматизации CI/CD (тестирование и деплой).
+- **Telegram API** — для интеграции с Telegram и отправки напоминаний пользователям.
+
+---
 
 ## Описание
 
-Проект состоит из следующих ключевых компонентов:
-- **Модели привычек** — пользователи могут создавать полезные и приятные привычки.
-- **API для работы с привычками** — позволяет выполнять CRUD операции с привычками.
+Проект включает в себя:
+- **Модели привычек** — создание полезных привычек.
+- **API для работы с привычками** — позволяет выполнять CRUD операции.
 - **Пагинация** — выводит привычки по 5 на страницу.
-- **Интеграция с Telegram** — для отправки напоминаний о привычках.
-- **Тестирование и покрытие** — проект покрыт тестами на 80% и проверен с использованием Flake8.
+- **Интеграция с Telegram** — для напоминаний о привычках.
+- **Тестирование** — проект покрыт тестами на 80%.
+
+---
 
 ## Требования
 
-Перед запуском убедитесь, что у вас установлены следующие инструменты:
+Перед запуском проекта нужно установить:
 - Python 3.12+
 - Redis (для работы с Celery)
 - Telegram API Token (для интеграции с Telegram)
+- Docker и Docker Compose
 
-## Установка и настройка
+---
+
+## Локальная установка
 
 1. Клонируйте репозиторий:
-git clone https://github.com/your-repo-name.git
-cd your-repo-name
+   - Используйте команду `git clone` для скачивания проекта.
 
-2. Создайте и активируйте виртуальное окружение:
-python3 -m venv venv
-source venv/bin/activate  # для Linux/Mac
-venv\Scripts\activate     # для Windows
+2. Создайте виртуальное окружение:
+   - Создайте и активируйте виртуальное окружение:
+     ```
+     python3 -m venv venv
+     source venv/bin/activate  # для Linux/Mac
+     venv\Scripts\activate     # для Windows
+     ```
 
 3. Установите зависимости:
-pip install -r requirements.txt
+   - Установите все нужные библиотеки, указанные в `requirements.txt`:
+     ```
+     pip install -r requirements.txt
+     ```
 
-4. Создайте файл .env и добавьте необходимые переменные окружения:
-TELEGRAM_API_TOKEN=your_telegram_api_token
-CELERY_BROKER_URL=redis://localhost:6379/0
-SECRET_KEY=your_django_secret_key
-DEBUG=True
+4. Настройте переменные окружения:
+   - Создайте файл `.env` и добавьте ключи, такие как API Token для Telegram, секретный ключ для Django и адрес Redis:
+     ```
+     TELEGRAM_API_TOKEN=your_telegram_api_token
+     CELERY_BROKER_URL=redis://localhost:6379/0
+     SECRET_KEY=your_django_secret_key
+     DEBUG=True
+     ```
 
-5. Примените миграции базы данных:
-python manage.py migrate
+5. Примените миграции:
+   - Используйте команду `python manage.py migrate`, чтобы настроить базу данных:
+     ```
+     python manage.py migrate
+     ```
 
-6. Запустите сервер Django:
-python manage.py runserver
+6. Запустите сервер:
+   - Запустите сервер Django командой `python manage.py runserver`:
+     ```
+     python manage.py runserver
+     ```
 
-# тестирование
+---
 
+## Запуск проекта с Docker
 
-File 	            statements 	missing excluded coverage
-config/__init__.py 	2 	        0 	    0 	     100%
-config/celery.py 	6 	        0 	    0    	 100%
-config/settings.py 	44 	        0 	    0 	     100%
-config/urls.py 	    11  	    0 	    0 	     100%
-habits/__init__.py 	0 	        0    	0 	     100%
-habits/admin.py 	7 	        0    	0 	     100%
-habits/apps.py 	    6 	        0 	    0 	     100%
-habits/migrations/__init__.py 	0 	0 	0    	 100%
-habits/migrations/0001_initial.py 	8 	0 	0  	100%
-habits/migrations/0002_alter_profile_user.py 	6 	0 	0 	100%
-habits/models.py 	34        	4 	    0 	     88%
-habits/permissions.py 	6 	3 	0 	              50%
-habits/serializers.py 	14 	2 	0 	              86%
-habits/signals.py 	9 	3 	0                  	67%
-habits/tests.py 	88 	4 	0 	95%
-habits/validators.py 	16 	10 	0 	38%
-habits/views.py 	56 	13 	0 	77%
-manage.py 	11 	2 	0 	82%
-users/__init__.py 	0 	0 	0 	100%
-users/admin.py 	14 	0 	0 	100%
-users/apps.py 	4 	0 	0 	100%
-users/migrations/__init__.py 	0 	0 	0 	100%
-users/migrations/0001_initial.py 	5 	0 	0 	100%
-users/migrations/0002_alter_customuser_options_and_more.py 	4 	0 	0 	100%
-users/models.py 	43 	11 	0 	74%
-users/serializers.py 	13 	1 	0 	92%
-users/tests.py 	1 	0 	0 	100%
-users/urls.py 	3 	0 	0 	100%
-users/views.py 	36 	17 	0 	53%
-Total 	447 	70 	0 	84%                                                        447     70    84%
+1. Клонируйте репозиторий:
+   - Если вы еще этого не сделали, скачайте проект через `git clone`.
 
-# Запуск проекта с Docker
+2. Создайте `.env` файл:
+   - Включите в него переменные для подключения к базе данных:
+     ```
+     USER=your_db_user
+     PASSWORD=your_db_password
+     NAME=your_db_name
+     ```
 
-1. Клонировать репозиторий:
-git clone <URL_репозитория>
+3. Запустите проект с помощью Docker:
+   - Используйте команду `docker-compose up -d --build`, чтобы развернуть приложение:
+     ```
+     sudo docker-compose up -d --build
+     ```
 
-2. Создать .env файл:
-USER=your_db_user
-PASSWORD=your_db_password
-NAME=your_db_name
+4. Примените миграции:
+   - Используйте команду `docker-compose exec web python manage.py migrate`, чтобы обновить базу данных:
+     ```
+     docker-compose exec web python manage.py migrate
+     ```
 
-3. Запуск проекта:
-sudo docker-compose up -d --build
+---
 
-4. Применение миграций:
-docker-compose exec web python manage.py migrate
+## Настройка удаленного сервера
+
+1. Подключитесь к серверу:
+   - Используйте SSH для подключения к серверу:
+     ```
+     ssh user@51.250.93.69
+     ```
+
+2. Установите необходимые пакеты:
+   - Обновите сервер и установите Python, Docker, Docker Compose и другие необходимые инструменты.
+
+3. Настройте SSH-ключи:
+   - Сгенерируйте SSH-ключ и добавьте его в GitHub для автоматического деплоя.
+
+4. Клонируйте проект на сервер:
+   - Используйте команду `git clone` для скачивания проекта на сервер:
+     ```
+     git clone https://github.com/your-repo-name.git
+     ```
+
+5. Запустите проект на сервере:
+   - Разверните проект с помощью Docker командой `docker-compose up -d --build`:
+     ```
+     sudo docker-compose up -d --build
+     ```
+
+6. Настройте Nginx:
+   - Убедитесь, что Nginx настроен для проксирования запросов к Django приложению.
+
+---
+
+## Настройка CI/CD с GitHub Actions
+
+1. В настройках GitHub добавьте секреты:
+   - Укажите SSH-ключ, IP-адрес сервера, имя пользователя и путь к проекту.
+
+2. Создайте файл для GitHub Actions:
+   - Настройте автоматическое выполнение тестов и деплоя с помощью GitHub Actions.
+
+3. Запустите процесс:
+   - После того как изменения отправлены в GitHub, GitHub Actions автоматически протестирует код и задеплоит его на сервер, если тесты прошли успешно.
+
+---
+
+## Запуск GitHub Actions
+
+1. Пушьте изменения в `main`:
+   - Когда вы вносите изменения в основной репозиторий, GitHub Actions автоматически запустит тесты и деплой.
+
+2. Проверьте результат:
+   - После деплоя приложение будет доступно по IP-адресу сервера.
+
+---
+
+Теперь, при каждом изменении в репозитории, проект будет автоматически тестироваться и деплоиться на сервер.
+
+## Лицензия
+
+Этот проект лицензируется под MIT License.
